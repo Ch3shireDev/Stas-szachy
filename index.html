@@ -1,41 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 
-    <link rel="stylesheet"
-    href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
-    integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU"
-    crossorigin="anonymous">
-    <script
-    src="https://code.jquery.com/jquery-3.5.1.js"
-    integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
-    crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-    integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
-    crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc=" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js" integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js" integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz" crossorigin="anonymous"></script>
 
 </head>
+
 <body>
-    <div id="board1" style="width: 400px"></div>
+    <div id="myBoard" style="width: 400px"></div>
 
+    <div>
+        <label>Nazwa gracza:</label>
+        <br/>
+        <input type="text" id="player" placeholder="Nazwa gracza" value="Gracz 1" />
+    </div>
+
+    <label>Kolor:</label>
+    <div>
+        <input type="radio" id="black-checkbox" name="color" value="white">
+        <label for="color">Białe</label><br>
+        <input type="radio" id="white-checkbox" name="color" value="black">
+        <label for="color">Czarne</label><br>
+    </div>
+    <button id="refresh-button">Odśwież</button>
+    <button id="reset-button">Resetuj</button>
     <script>
-        var board1 = Chessboard('board1', 'start')
+        var board = null;
+        var game = new Chess();
+
+        var waiting = false;
+        var config = {};
+
+
+
+        function onDrop(source, target, piece, newPos, oldPos, orientation) {
+
+            const color = $("input[name='color']:checked").val();
+            console.log(waiting);
+            console.log(piece)
+            console.log(color);
+            if (waiting) return 'snapback';
+            if (piece[0] !== color[0]) return 'snapback';
+
+            var move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            // illegal move
+            if (move === null) return 'snapback';
+
+
+            var fen = game.fen();
+            const player = $('#player').val();
+
+            $.post('/api', {
+                    fen: fen,
+                    color: color
+                },
+                function(event) {
+                    waiting = true;
+                }
+            );
+        }
+
+
+        config = {
+            draggable: true,
+            position: 'start',
+            onDrop: onDrop
+        }
+
+        board = Chessboard('myBoard', config);
+
+        $.get('/api', function(body) {
+            const fen = body.fen;
+            const player = body.player;
+        });
+
+        $('#refresh-button').click(function() {
+
+            const playerColor = $("input[name='color']:checked").val();
+
+            $.get('/api', function(body) {
+                const color = body.color;
+                const fen = body.fen;
+
+                if (fen === null) {
+                    board.position('start');
+                    game.clear();
+                } else {
+                    board.position(fen);
+                    game.load(fen);
+                }
+            });
+        });
+
+        $('#reset-button').click(function() {
+            board.position('start');
+            game.clear();
+        });
     </script>
 
-    <script>
-        function fun(e){
-            if(e.target.textContent==='abc'){
-            e.target.textContent = "xyz";
-        }
-            else{
-                e.target.textContent = "abc";
-            }
-        }
-    </script>
-    
-    <button onclick="fun(event)">abc</button>
 </body>
+
 </html>
