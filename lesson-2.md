@@ -40,8 +40,6 @@ app.use('/img/chesspieces/wikipedia', express.static('img/chesspieces/wikipedia'
 ```
 
 
-
-
 ```
 npm install --save body-parser
 ```
